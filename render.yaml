@@ -1,0 +1,41 @@
+# Render Blueprint – deploys backend (Web Service) + frontend (Static Site)
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── Backend: FastAPI Web Service ─────────────────────────────────────
+  - type: web
+    name: agentforge-api
+    runtime: python
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false          # you'll be prompted to fill this in
+      - key: SECRET_KEY
+        generateValue: true  # Render auto-generates a secure random string
+      - key: CORS_ORIGINS
+        value: https://agentforge-frontend.onrender.com
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./chatbot_platform.db
+      - key: DEBUG
+        value: "false"
+    plan: free
+
+  # ── Frontend: React Static Site ──────────────────────────────────────
+  - type: web
+    name: agentforge-frontend
+    runtime: static
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://agentforge-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    plan: free
